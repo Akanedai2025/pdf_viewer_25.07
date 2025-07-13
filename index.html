@@ -1,18 +1,41 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>PDF資料一覧</title>
+
+  <!-- pdf.js ライブラリ読み込み -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  </script>
+
   <style>
-    body { font-family: sans-serif; padding: 20px; background: #f5f5f5; }
-    canvas { display: block; margin-bottom: 40px; background: white; box-shadow: 0 0 10px #ccc; }
-    h2 { margin-top: 60px; }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    h1 {
+      margin-bottom: 20px;
+    }
+    .pdf-container {
+      margin-bottom: 40px;
+    }
+    .pdf-title {
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+    canvas {
+      display: block;
+      margin-bottom: 10px;
+      border: 1px solid #ccc;
+    }
   </style>
 </head>
 <body>
-  <h1>PDF資料一覧</h1>
 
+  <h1>PDF資料一覧</h1>
   <div id="pdf-list"></div>
 
   <script>
@@ -22,38 +45,58 @@
       { name: "02 あかね台だより①.pdf", path: "pdf/02_あかね台だより①.pdf" },
       { name: "02 あかね台だより②.pdf", path: "pdf/02_あかね台だより②.pdf" },
       { name: "04 人物風土記２回目.pdf", path: "pdf/04_人物風土記２回目.pdf" },
-      { name: "05 熱中症PDF、簡略ver..pdf", path: "pdf/05_熱中症PDF_簡略ver.pdf" },
+      { name: "05 熱中症PDF、簡略ver..pdf", path: "pdf/05_熱中症PDF、簡略ver..pdf" },
       { name: "06 モルック体験会.pdf", path: "pdf/06_モルック体験会.pdf" },
       { name: "07 成瀬公民館だより.pdf", path: "pdf/07_成瀬公民館だより.pdf" },
       { name: "08 成小だより.pdf", path: "pdf/08_成小だより.pdf" },
       { name: "09 地域安全ニュース.pdf", path: "pdf/09_地域安全ニュース.pdf" },
-      { name: "10 神奈川県×iChoosr..pdf", path: "pdf/10_神奈川県_iChoosr.pdf" },
+      { name: "10 神奈川県×iChoosr..pdf", path: "pdf/10_神奈川県×iChoosr..pdf" },
       { name: "11 ｶｰﾌﾞﾐﾗｰ設置申請書.pdf", path: "pdf/11_ｶｰﾌﾞﾐﾗｰ設置申請書.pdf" }
     ];
 
-    const container = document.getElementById("pdf-list");
+    const pdfListDiv = document.getElementById('pdf-list');
 
-    pdfs.forEach(async (pdf) => {
-      const title = document.createElement("h2");
-      title.textContent = pdf.name;
+    async function renderPDF(name, url) {
+      const container = document.createElement('div');
+      container.className = 'pdf-container';
+
+      const title = document.createElement('div');
+      title.className = 'pdf-title';
+      title.textContent = name;
       container.appendChild(title);
 
-      const loadingTask = pdfjsLib.getDocument(pdf.path);
-      const pdfDoc = await loadingTask.promise;
-
-      for (let pageNum = 1; pageNum <= pdfDoc.numPages; pageNum++) {
-        const page = await pdfDoc.getPage(pageNum);
-        const viewport = page.getViewport({ scale: 1.2 });
-
-        const canvas = document.createElement("canvas");
-        const context = canvas.getContext("2d");
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
-
-        await page.render({ canvasContext: context, viewport }).promise;
-        container.appendChild(canvas);
+      try {
+        const loadingTask = pdfjsLib.getDocument(url);
+        const pdf = await loadingTask.promise;
+        for(let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+          const page = await pdf.getPage(pageNum);
+          const viewport = page.getViewport({ scale: 1.2 });
+          const canvas = document.createElement('canvas');
+          const context = canvas.getContext('2d');
+          canvas.height = viewport.height;
+          canvas.width = viewport.width;
+          container.appendChild(canvas);
+          const renderContext = {
+            canvasContext: context,
+            viewport: viewport
+          };
+          await page.render(renderContext).promise;
+        }
+      } catch (error) {
+        container.appendChild(document.createTextNode('PDFの読み込みに失敗しました。'));
+        console.error('Error loading PDF:', error);
       }
-    });
+
+      pdfListDiv.appendChild(container);
+    }
+
+    // PDFを順にレンダリング
+    (async () => {
+      for(const pdf of pdfs) {
+        await renderPDF(pdf.name, pdf.path);
+      }
+    })();
   </script>
+
 </body>
 </html>
